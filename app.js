@@ -1,11 +1,3 @@
-const dotenv = require('dotenv');
-const result = dotenv.config();
-
-if (result.error) {
-  throw result.error;
-}
-
-const infuraApiKey = process.env.INFURA_API_KEY;
 
 const sendForm = document.getElementById('send-form');
 const sendButton = document.getElementById('send-button');
@@ -45,7 +37,7 @@ sendButton.addEventListener('click', async () => {
 
 
 async function sendTransaction(privateKey, toAddress) {
-  const web3 = new Web3(new Web3.providers.HttpProvider(`https://eth-holesky.blastapi.io/${infuraApiKey}`));
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const fromAddress = account.address;
 
