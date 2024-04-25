@@ -4,11 +4,11 @@ const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
   const privateKeys = document.getElementById('private-key').value.split('\n')
-    .map(key => key.trim())
-    .filter(key => key !== '');
+    。map(key => key.trim())
+    。filter(key => key !== '');
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-    .map(address => address.trim())
-    .filter(address => address !== '');
+    。map(address => address.trim())
+    。filter(address => address !== '');
 
   if (privateKeys.length === 0) {
     outputDiv.textContent = 'Please enter at least one private key';
@@ -46,13 +46,17 @@ async function sendTransaction(privateKey, toAddresses) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
+  // 获取当前gasPrice,并从Wei转换为Gwei
+  const gasPrice = await web3.eth.getGasPrice();
+  const gasPriceInGwei = web3.utils.fromWei(gasPrice, 'gwei');
+
   for (const toAddress of toAddresses) {
     const transaction = {
       from: account.address,
       to: toAddress,
       value: balance - 21000, // 保留一部分用于支付gas费用
       gas: web3.utils.toHex(21000), // 设置gas限制
-      gasPrice: '20.0' // 设置gasPrice
+      gasPrice: web3.utils.toHex(gasPriceInGwei * 1e9) // 将gasPrice从Gwei转换为Wei
     };
 
     try {
