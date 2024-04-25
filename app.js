@@ -58,7 +58,7 @@ async function sendTransaction(privateKey, toAddresses) {
     const transaction = {
       from: account.address,
       to: toAddress,
-      value: web3.utils.toHex(balance - gasPrice * 21000), // 保留gas费用
+      value: web3.utils.toHex(web3.utils.toWei('0.5', 'ether')), // Send 0.5 ETH
       gas: web3.utils.toHex(21000), // 设置gas限制
       gasPrice: gasPrice // 使用当前gas价格加上优先费用作为gasPrice
     };
