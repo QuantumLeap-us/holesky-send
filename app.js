@@ -47,16 +47,20 @@ async function sendTransaction(privateKey, toAddresses) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
-  // 使用最快的gasPrice (4 Gwei)
-  const fastestGasPrice = web3.utils.toWei('4', 'gwei');
+  // 获取当前基础费用
+  const baseFee = await web3.eth.getMaxPriorityFeePerGas();
+
+  // 设置gasPrice为基础费用加上一个小的优先费用
+  const priorityFee = web3.utils.toWei('1.5', 'gwei'); // 设置优先费用为1.5 Gwei
+  const gasPrice = web3.utils.toBN(baseFee).add(web3.utils.toBN(priorityFee));
 
   for (const toAddress of toAddresses) {
     const transaction = {
       from: account.address,
       to: toAddress,
-      value: web3.utils.toHex(balance - fastestGasPrice * 21000), // 保留gas费用
+      value: web3.utils.toHex(balance - gasPrice * 21000), // 保留gas费用
       gas: web3.utils.toHex(21000), // 设置gas限制
-      gasPrice: fastestGasPrice // 使用最快的gasPrice
+      gasPrice: gasPrice // 使用基础费用加上优先费用作为gasPrice
     };
 
     try {
@@ -65,7 +69,6 @@ async function sendTransaction(privateKey, toAddresses) {
 
       // 检查账户余额是否足够支付gas费用
       const gasLimit = web3.utils.toBN(transaction.gas);
-      const gasPrice = web3.utils.toBN(transaction.gasPrice);
       const totalGasCost = gasLimit.mul(gasPrice);
       const accountBalance = web3.utils.toBN(balance);
 
