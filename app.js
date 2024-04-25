@@ -1,14 +1,16 @@
+
 const sendForm = document.getElementById('send-form');
 const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
+  const privateKeys = [...]; // Get the array of private keys from the form input
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-  .map(address => address.trim())
-  .filter(address => address !== '');
+    .map(address => address.trim())
+    .filter(address => address !== '');
 
-  if (privateKey === '') {
-    outputDiv.textContent = 'Please enter a private key';
+  if (privateKeys.length === 0) {
+    outputDiv.textContent = 'Please enter at least one private key';
     return;
   }
 
@@ -20,53 +22,39 @@ sendButton.addEventListener('click', async () => {
   let numTransactions = 0;
   let numErrors = 0;
 
-  for (const toAddress of toAddresses) {
+  for (const privateKey of privateKeys) {
     try {
-      const transaction = await sendTransaction(privateKey, toAddress);
+      const transaction = await sendTransaction(privateKey, toAddresses);
       numTransactions++;
       outputDiv.innerHTML += `Transaction #${numTransactions} sent from ${transaction.from} with hash: <a href="https://holesky.etherscan.io/tx/${transaction.transactionHash}" rel="noopener">${transaction.transactionHash}</a><br>`;
       outputDiv.innerHTML += `Sent ${transaction.value} ETH to ${transaction.to}<br><br>`;
 
     } catch (error) {
       numErrors++;
-      outputDiv.textContent += `Error sending transaction to ${error.to}: ${error.message}\n\n`;
+      outputDiv.textContent += `Error sending transaction from ${error.from} to ${error.to}: ${error.message}\n\`;
     }
   }
 
   if (numErrors > 0) {
-    outputDiv.textContent += `Failed to send ${numErrors} transaction${numErrors === 1 ? '' : 's'}\n`;
+    outputDiv.textContent += `Failed to send ${numErrors} transactions${numErrors === 1 ? '' : 's'}\n`;
   }
 });
 
-
 async function sendTransaction(privateKey, toAddress) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('(https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c)'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-  const fromAddress = account.address;
+  const transaction = {
+    from: account.address,
+    to: toAddress,
+    value: '1.0', // Replace with the actual ETH amount
+    gasPrice: '20.0',
+    gasLimit: '20000'
+  };
 
-  const balance = await web3.eth.getBalance(fromAddress);
-  const value = web3.utils.toBN(balance).sub(web3.utils.toBN(web3.utils.toWei('0.00009', 'ether')));
+  try {
+    await web3.eth.sendTransaction(transaction);
 
-  if (value <= 0) {
-    throw new Error(`Insufficient balance in ${fromAddress}. Skipping transaction.`);
+  } catch (error) {
+    throw error;
   }
-
-  const gasPrice = await web3.eth.getGasPrice();
-  const gasLimit = 21000;
-  const txObject = {
-    from: fromAddress,
-    to: toAddress,
-    value: web3.utils.toWei('0.01', 'ether'), // Send 0.01 ETH to each recipient
-    gasPrice: gasPrice,
-    gasLimit: gasLimit
-  };
-
-  const signed = await account.signTransaction(txObject);
-  const tx = await web3.eth.sendSignedTransaction(signed.rawTransaction);
-  return {
-    from: fromAddress,
-    to: toAddress,
-    value: web3.utils.fromWei(txObject.value),
-    transactionHash: tx.transactionHash
-  };
 }
