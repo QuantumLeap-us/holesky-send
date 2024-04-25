@@ -1,32 +1,36 @@
-
 const sendForm = document.getElementById('send-form');
 const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
-  const privateKeys = sendForm.elements['private-keys'].value.split('\n')
-    .map(key => key.trim())
-    .filter(key => key !== '');
-  const toAddress = sendForm.elements['to-address'].value;
+  const privateKey = sendForm.elements['private-key'].value.trim();
+  const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
+    .map(address => address.trim())
+    .filter(address => address !== '');
 
-  if (privateKeys.length === 0) {
-    outputDiv.textContent = 'Please enter at least one private key';
+  if (privateKey === '') {
+    outputDiv.textContent = 'Please enter a private key';
+    return;
+  }
+
+  if (toAddresses.length === 0) {
+    outputDiv.textContent = 'Please enter at least one recipient address';
     return;
   }
 
   let numTransactions = 0;
   let numErrors = 0;
 
-  for (const privateKey of privateKeys) {
+  for (const toAddress of toAddresses) {
     try {
       const transaction = await sendTransaction(privateKey, toAddress);
       numTransactions++;
-      outputDiv.innerHTML += `Transaction #${numTransactions} sent from ${transaction.from} with hash: <a href="https://holesky.etherscan.io/tx/${transaction.transactionHash}" rel="noopener">${transaction.transactionHash}</a><br>`;
-      outputDiv.innerHTML += `Sent ${transaction.value} ETH to ${transaction.to}<br><br>`;
+      outputDiv.innerHTML += `Transaction #${numTransactions} sent to ${transaction.to} with hash: <a href="(link unavailable)" rel="noopener">${transaction.transactionHash}</a><br>`;
+      outputDiv.innerHTML += `Sent ${transaction.value} ETH from ${transaction.from}<br><br>`;
 
     } catch (error) {
       numErrors++;
-      outputDiv.textContent += `Error sending transaction from ${error.from} to ${error.to}: ${error.message}\n\n`;
+      outputDiv.textContent += `Error sending transaction to ${error.to}: ${error.message}\n\n`;
     }
   }
 
@@ -37,7 +41,7 @@ sendButton.addEventListener('click', async () => {
 
 
 async function sendTransaction(privateKey, toAddress) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('(link unavailable)'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const fromAddress = account.address;
 
@@ -53,7 +57,7 @@ async function sendTransaction(privateKey, toAddress) {
   const txObject = {
     from: fromAddress,
     to: toAddress,
-    value: value,
+    value: web3.utils.toWei('0.01', 'ether'), // Send 0.01 ETH to each recipient
     gasPrice: gasPrice,
     gasLimit: gasLimit
   };
@@ -63,7 +67,7 @@ async function sendTransaction(privateKey, toAddress) {
   return {
     from: fromAddress,
     to: toAddress,
-    value: web3.utils.fromWei(value),
+    value: web3.utils.fromWei(txObject.value),
     transactionHash: tx.transactionHash
   };
 }
