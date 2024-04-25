@@ -122,28 +122,20 @@ button:hover {
 
 
 
-/* #output {
-  margin-top: 1rem;
-  padding: 1rem;
-  background-color: #fff;
-  border-radius: 5px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
-  width: 800px;
-  height: 100px; 
-  overflow-wrap: break-word;
-  resize: none; 
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-*/
-
 #private-keys {
   height: 300px;
   display: block;
   overflow: auto;
 }
+
+#to-addresses {
+  height: 200px;
+  resize: vertical;
+  padding: 10px;
+  font-size: 16px;
+  font-family: monospace;
+}
+
 footer {
   margin-top: auto;
   background-color: #f2f2f2;
