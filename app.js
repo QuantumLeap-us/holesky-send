@@ -47,12 +47,12 @@ async function sendTransaction(privateKey, toAddresses) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
-  // 获取当前基础费用
-  const baseFee = await web3.eth.getMaxPriorityFeePerGas();
+  // 获取当前的gas价格
+  const currentGasPrice = await web3.eth.getGasPrice();
 
-  // 设置gasPrice为基础费用加上一个小的优先费用
+  // 设置gasPrice为当前gas价格加上一个小的优先费用
   const priorityFee = web3.utils.toWei('1.5', 'gwei'); // 设置优先费用为1.5 Gwei
-  const gasPrice = web3.utils.toBN(baseFee).add(web3.utils.toBN(priorityFee));
+  const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
 
   for (const toAddress of toAddresses) {
     const transaction = {
@@ -60,7 +60,7 @@ async function sendTransaction(privateKey, toAddresses) {
       to: toAddress,
       value: web3.utils.toHex(balance - gasPrice * 21000), // 保留gas费用
       gas: web3.utils.toHex(21000), // 设置gas限制
-      gasPrice: gasPrice // 使用基础费用加上优先费用作为gasPrice
+      gasPrice: gasPrice // 使用当前gas价格加上优先费用作为gasPrice
     };
 
     try {
