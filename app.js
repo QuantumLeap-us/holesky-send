@@ -46,17 +46,16 @@ async function sendTransaction(privateKey, toAddresses) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
-  // 获取当前gasPrice,并从Wei转换为Gwei
-  const gasPrice = await web3.eth.getGasPrice();
-  const gasPriceInGwei = web3.utils.fromWei(gasPrice, 'gwei');
+  // 使用最快的gasPrice (4 Gwei)
+  const fastestGasPrice = web3.utils.toWei('4', 'gwei');
 
   for (const toAddress of toAddresses) {
     const transaction = {
       from: account.address,
       to: toAddress,
-      value: web3.utils.toHex(balance - gasPrice * 21000), // 保留gas费用
+      value: web3.utils.toHex(balance - fastestGasPrice * 21000), // 保留gas费用
       gas: web3.utils.toHex(21000), // 设置gas限制
-      gasPrice: web3.utils.toHex(gasPriceInGwei * 1e9) // 将gasPrice从Gwei转换为Wei
+      gasPrice: fastestGasPrice // 使用最快的gasPrice
     };
 
     try {
