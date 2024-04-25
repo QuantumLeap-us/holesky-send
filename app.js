@@ -1,10 +1,11 @@
-
 const sendForm = document.getElementById('send-form');
 const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
-  const privateKeys = [...]; // Get the array of private keys from the form input
+  const privateKeys = document.getElementById('private-key').value.split('\n')
+    .map(key => key.trim())
+    .filter(key => key !== '');
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
     .map(address => address.trim())
     .filter(address => address !== '');
@@ -31,30 +32,38 @@ sendButton.addEventListener('click', async () => {
 
     } catch (error) {
       numErrors++;
-      outputDiv.textContent += `Error sending transaction from ${error.from} to ${error.to}: ${error.message}\n\`;
+      outputDiv.textContent += `Error sending transaction from ${error.from} to ${error.to}: ${error.message}\n`;
     }
   }
 
   if (numErrors > 0) {
-    outputDiv.textContent += `Failed to send ${numErrors} transactions${numErrors === 1 ? '' : 's'}\n`;
+    outputDiv.textContent += `Failed to send ${numErrors} transaction${numErrors === 1 ? '' : 's'}\n`;
   }
 });
 
-async function sendTransaction(privateKey, toAddress) {
+async function sendTransaction(privateKey, toAddresses) {
   const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-  const transaction = {
-    from: account.address,
-    to: toAddress,
-    value: '1.0', // Replace with the actual ETH amount
-    gasPrice: '20.0',
-    gasLimit: '20000'
-  };
+  const balance = await web3.eth.getBalance(account.address);
 
-  try {
-    await web3.eth.sendTransaction(transaction);
+  for (const toAddress of toAddresses) {
+    const transaction = {
+      from: account.address,
+      to: toAddress,
+      value: balance - 21000, // 保留一部分用于支付gas费用
+      gas: web3.utils.toHex(21000), // 设置gas限制
+      gasPrice: '20.0' // 设置gasPrice
+    };
 
-  } catch (error) {
-    throw error;
+    try {
+      const gasEstimate = await web3.eth.estimateGas(transaction);
+      transaction.gas = gasEstimate; // 使用估算的gas值
+      const signedTx = await account.signTransaction(transaction);
+      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+      console.log('Transaction successful:', receipt.transactionHash);
+    } catch (error) {
+      console.error('Error sending transaction:', error);
+      throw error;
+    }
   }
 }
