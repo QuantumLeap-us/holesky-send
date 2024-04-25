@@ -5,8 +5,8 @@ const outputDiv = document.getElementById('output');
 sendButton.addEventListener('click', async () => {
   const privateKey = sendForm.elements['private-key'].value.trim();
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-    .map(address => address.trim())
-    .filter(address => address !== '');
+    。map(address => address.trim())
+    。filter(address => address !== '');
 
   if (privateKey === '') {
     outputDiv.textContent = 'Please enter a private key';
@@ -25,8 +25,8 @@ sendButton.addEventListener('click', async () => {
     try {
       const transaction = await sendTransaction(privateKey, toAddress);
       numTransactions++;
-      outputDiv.innerHTML += `Transaction #${numTransactions} sent to ${transaction.to} with hash: <a href="(link unavailable)" rel="noopener">${transaction.transactionHash}</a><br>`;
-      outputDiv.innerHTML += `Sent ${transaction.value} ETH from ${transaction.from}<br><br>`;
+      outputDiv.innerHTML += `Transaction #${numTransactions} sent from ${transaction.from} with hash: <a href="https://holesky.etherscan.io/tx/${transaction.transactionHash}" rel="noopener">${transaction.transactionHash}</a><br>`;
+      outputDiv.innerHTML += `Sent ${transaction.value} ETH to ${transaction.to}<br><br>`;
 
     } catch (error) {
       numErrors++;
@@ -41,7 +41,7 @@ sendButton.addEventListener('click', async () => {
 
 
 async function sendTransaction(privateKey, toAddress) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('(link unavailable)'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('(https://ethereum-holesky.blockpi.network/v1/rpc/ce9f71735a4b346a47f062a8b55fdb4c355a13d1)'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const fromAddress = account.address;
 
