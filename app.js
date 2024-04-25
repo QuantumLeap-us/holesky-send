@@ -4,11 +4,11 @@ const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
   const privateKeys = document.getElementById('private-key').value.split('\n')
-    .map(key => key.trim())
-    .filter(key => key !== '');
+    。map(key => key.trim())
+    。filter(key => key !== '');
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-    .map(address => address.trim())
-    .filter(address => address !== '');
+    。map(address => address.trim())
+    。filter(address => address !== '');
 
   if (privateKeys.length === 0) {
     outputDiv.textContent = 'Please enter at least one private key';
@@ -54,7 +54,7 @@ async function sendTransaction(privateKey, toAddresses) {
     const transaction = {
       from: account.address,
       to: toAddress,
-      value: balance - 21000, // 保留一部分用于支付gas费用
+      value: web3.utils.toHex(balance - gasPrice * 21000), // 保留gas费用
       gas: web3.utils.toHex(21000), // 设置gas限制
       gasPrice: web3.utils.toHex(gasPriceInGwei * 1e9) // 将gasPrice从Gwei转换为Wei
     };
@@ -62,6 +62,17 @@ async function sendTransaction(privateKey, toAddresses) {
     try {
       const gasEstimate = await web3.eth.estimateGas(transaction);
       transaction.gas = gasEstimate; // 使用估算的gas值
+
+      // 检查账户余额是否足够支付gas费用
+      const gasLimit = web3.utils.toBN(transaction.gas);
+      const gasPrice = web3.utils.toBN(transaction.gasPrice);
+      const totalGasCost = gasLimit.mul(gasPrice);
+      const accountBalance = web3.utils.toBN(balance);
+
+      if (totalGasCost.gt(accountBalance)) {
+        throw new Error('Insufficient balance to pay gas');
+      }
+
       const signedTx = await account.signTransaction(transaction);
       const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
       console.log('Transaction successful:', receipt.transactionHash);
