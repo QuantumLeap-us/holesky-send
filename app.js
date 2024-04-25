@@ -40,7 +40,7 @@ sendButton.addEventListener('click', async () => {
 
 
 async function sendTransaction(privateKey, toAddress) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('(https://ethereum-holesky.blockpi.network/v1/rpc/ce9f71735a4b346a47f062a8b55fdb4c355a13d1)'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('(https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c)'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const fromAddress = account.address;
 
