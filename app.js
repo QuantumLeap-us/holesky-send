@@ -4,11 +4,11 @@ const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
   const privateKeys = document.getElementById('private-key').value.split('\n')
-    。map(key => key.trim())
-    。filter(key => key !== '');
+    .map(key => key.trim())
+    .filter(key => key !== '');
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-    。map(address => address.trim())
-    。filter(address => address !== '');
+    .map(address => address.trim())
+    .filter(address => address !== '');
 
   if (privateKeys.length === 0) {
     outputDiv.textContent = 'Please enter at least one private key';
