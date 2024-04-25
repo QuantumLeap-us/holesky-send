@@ -5,8 +5,8 @@ const outputDiv = document.getElementById('output');
 sendButton.addEventListener('click', async () => {
   const privateKey = sendForm.elements['private-key'].value.trim();
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-    。map(address => address.trim())
-    。filter(address => address !== '');
+  .map(address => address.trim())
+  .filter(address => address !== '');
 
   if (privateKey === '') {
     outputDiv.textContent = 'Please enter a private key';
