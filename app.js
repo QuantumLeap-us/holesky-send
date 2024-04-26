@@ -3,7 +3,7 @@ const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 // 连接到以太坊节点
-const web3 = new Web3(new Web3.providers.HttpProvider('https://mainnet.infura.io/v3/YOUR-PROJECT-ID'));
+const web3 = new Web3(new Web3.providers.HttpProvider('https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c'));
 
 // 估算Gas函数
 async function estimateGas(transaction) {
