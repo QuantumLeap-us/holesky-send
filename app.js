@@ -45,68 +45,57 @@ async function sendBatchTransactions(batchTransactions, privateKey) {
   }
 }
 
-async function sendTransactionsBatch(privateKey, toAddresses) {
+async function sendBatchTransactions(batchTransactions, privateKey) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-  const balance = await web3.eth.getBalance(account.address);
-
+  const nonce = await web3.eth.getTransactionCount(account.address, 'pending');
   const gasPrice = await web3.eth.getGasPrice();
-  const transactions = [];
-
-  const BATCH_SIZE = 10;
-  const DELAY_MS = 500;
-
-  let nonce = await web3.eth.getTransactionCount(account.address, 'pending');
-
-  for (let i = 0; i < toAddresses.length; i += BATCH_SIZE) {
-    const batchToAddresses = toAddresses.slice(i, i + BATCH_SIZE);
-    const batchTransactions = batchToAddresses.map(toAddress => ({
-      from: account.address,
-      to: toAddress,
-      value: web3.utils.toHex(balance),
-      gasPrice: web3.utils.toHex(gasPrice),
-      nonce: web3.utils.toHex(nonce++)
-    }));
-
-    try {
-      const batchTransactionResults = await sendBatchTransactions(batchTransactions, privateKey);
-      transactions.push(...batchTransactionResults);
-    } catch (error) {
-      console.error('Error sending transactions:', error);
-      outputDiv.textContent += `Error sending transactions from ${account.address}: ${error.message}\n`;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
-  }
-
-  return transactions;
-}
-
-sendButton.addEventListener('click', async () => {
-  const privateKey = document.getElementById('private-key').value.trim();
-  const toAddresses = sendForm.elements['to-addresses'].value
-    .split('\n')
-    .map(address => address.trim())
-    .filter(web3.utils.isAddress);
-
-  if (!privateKey) {
-    outputDiv.textContent = 'Please enter a private key';
-    return;
-  }
-
-  if (toAddresses.length === 0) {
-    outputDiv.textContent = 'Please enter at least one valid recipient address';
-    return;
-  }
-
-  outputDiv.textContent = '';
 
   try {
-    const transactions = await sendTransactionsBatch(privateKey, toAddresses);
-    transactions.forEach(({ transactionHash, from, to, value }) => {
+    const signedTransactions = await Promise.all(
+      batchTransactions.map((tx, index) => {
+        tx.gas = await estimateGas(tx);
+        tx.gasPrice = gasPrice;
+        tx.nonce = web3.utils.toHex(nonce + index);
+        return account.signTransaction(tx);
+      })
+    );
+
+    const results = await Promise.all(
+      signedTransactions.map(tx => web3.eth.sendSignedTransaction(tx.rawTransaction))
+    );
+
+    const batchTransactionResults = results.map((result, index) => {
+      const transaction = batchTransactions[index];
+      return {
+        transactionHash: result.transactionHash,
+        from: account.address,
+        to: transaction.to,
+        value: web3.utils.fromWei(transaction.value, 'ether')
+      };
+    });
+
+    return batchTransactionResults;
+  } catch (error) {
+    console.error('Error sending batch transactions:', error);
+    throw error;
+  }
+}
+
+async function sendTransactionsBatch(privateKey, toAddresses) {
+  const batchTransactions = toAddresses.map(toAddress => ({
+    from: web3.eth.accounts.privateKeyToAccount(privateKey).address,
+    to: toAddress,
+    value: web3.utils.toHex(web3.utils.toWei('0.5', 'ether')),
+  }));
+
+  try {
+    const batchTransactionResults = await sendBatchTransactions(batchTransactions, privateKey);
+    batchTransactionResults.forEach(({ transactionHash, from, to, value }) => {
       outputDiv.innerHTML += `Transaction sent from ${from} with hash: <a href="https://etherscan.io/tx/${transactionHash}" target="_blank" rel="noopener">${transactionHash}</a><br>`;
       outputDiv.innerHTML += `Sent ${value} ETH to ${to}<br><br>`;
     });
   } catch (error) {
-    outputDiv.textContent = `Error: ${error.message}`;
+    console.error('Error sending transactions:', error);
+    outputDiv.textContent += `Error sending transactions from ${web3.eth.accounts.privateKeyToAccount(privateKey).address}: ${error.message}\n`;
   }
-});
+}
