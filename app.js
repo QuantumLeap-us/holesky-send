@@ -3,11 +3,11 @@ const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
-  const privateKeys = document.getElementById('private-key').value.split('\n')
+  const privateKeys = document.getElementById('private-key').value.split('\\n')
     .map(key => key.trim())
     .filter(key => key !== '');
 
-  const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
+  const toAddresses = sendForm.elements['to-addresses'].value.split('\\n')
     .map(address => address.trim())
     .filter(address => address !== '');
 
@@ -58,7 +58,7 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
   const priorityFee = web3.utils.toWei('1.5', 'gwei'); // 设置优先费用为1.5 Gwei
   const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
 
-  const batchedTransactions = []; // 将 transactions 重命名为 batchedTransactions
+  let transactions = []; // 将 const 改为 let
   const batchTransactions = [];
 
   for (const toAddress of toAddresses) {
@@ -86,7 +86,7 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
 
     results.forEach((result, index) => {
       const transaction = batchTransactions[index];
-      batchedTransactions.push({ // 使用 batchedTransactions 代替 transactions
+      transactions.push({
         transactionHash: result.transactionHash,
         from: account.address,
         to: transaction.to,
@@ -95,8 +95,8 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
     });
   } catch (error) {
     console.error('Error sending transactions:', error);
-    throw { from: undefined, message: error.message }; // 移除 account.address
+    throw { from: undefined, message: error.message };
   }
 
-  return batchedTransactions;
+  return transactions;
 }
