@@ -11,6 +11,24 @@ async function estimateGas(transaction) {
   return Math.ceil(gasEstimate * 1.2); // 增加20%的Gas上限
 }
 
+// 等待交易收据函数
+async function waitForTransactionReceipt(transactionHash) {
+  const checkInterval = 5000; // 检查间隔时间（5秒）
+  const maxAttempts = 30; // 最大尝试次数（2.5分钟）
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    const receipt = await web3.eth.getTransactionReceipt(transactionHash);
+    if (receipt) {
+      return receipt;
+    }
+    await new Promise(resolve => setTimeout(resolve, checkInterval));
+    attempts++;
+  }
+
+  throw new Error(`Failed to get transaction receipt for ${transactionHash}`);
+}
+
 // 发送批量交易函数
 async function sendBatchTransactions(batchTransactions, privateKey) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
@@ -28,13 +46,17 @@ async function sendBatchTransactions(batchTransactions, privateKey) {
     );
 
     const results = await Promise.all(
-      signedTransactions.map(tx => web3.eth.sendSignedTransaction(tx.rawTransaction))
+      signedTransactions.map(async tx => {
+        const result = await web3.eth.sendSignedTransaction(tx.rawTransaction);
+        const receipt = await waitForTransactionReceipt(result.transactionHash);
+        return receipt;
+      })
     );
 
-    const batchTransactionResults = results.map((result, index) => {
+    const batchTransactionResults = results.map((receipt, index) => {
       const transaction = batchTransactions[index];
       return {
-        transactionHash: result.transactionHash,
+        transactionHash: receipt.transactionHash,
         from: account.address,
         to: transaction.to,
         value: web3.utils.fromWei(transaction.value, 'ether')
