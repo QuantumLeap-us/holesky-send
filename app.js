@@ -91,32 +91,50 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
   return transactions;
 }
 
-async function sendBatchTransactions(batchTransactions) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('https://ethereum-holesky.blockpi.network/v1/rpc/ce9f71735a4b346a47f062a8b55fdb4c355a13d1'));
+async function sendTransactionsBatch(privateKey, toAddresses) {
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+  const balance = await web3.eth.getBalance(account.address);
 
-  try {
-    const gasEstimates = await Promise.all(batchTransactions.map(tx => web3.eth.estimateGas(tx)));
-    batchTransactions.forEach((tx, index) => {
-      tx.gas = gasEstimates[index];
-    });
+  const currentGasPrice = await web3.eth.getGasPrice();
+  const priorityFee = web3.utils.toWei('1.5', 'gwei');
+  const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
 
-    const signedTransactions = await Promise.all(batchTransactions.map(tx => account.signTransaction(tx)));
-    const results = await Promise.all(signedTransactions.map(tx => web3.eth.sendSignedTransaction(tx.rawTransaction)));
+  const transactions = [];
 
-    const batchTransactionResults = results.map((result, index) => {
-      const transaction = batchTransactions[index];
-      return {
-        transactionHash: result.transactionHash,
+  const BATCH_SIZE = 10; // 每批发送 10 个交易
+  const DELAY_MS = 500; // 每批之间延迟 500 毫秒
+
+  let nonce = await web3.eth.getTransactionCount(account.address, 'pending');
+
+  for (let i = 0; i < toAddresses.length; i += BATCH_SIZE) {
+    const batchToAddresses = toAddresses.slice(i, i + BATCH_SIZE);
+    const batchTransactions = [];
+
+    for (const toAddress of batchToAddresses) {
+      const transaction = {
         from: account.address,
-        to: transaction.to,
-        value: web3.utils.fromWei(transaction.value, 'ether')
+        to: toAddress,
+        value: web3.utils.toHex(web3.utils.toWei('0.5', 'ether')),
+        gas: web3.utils.toHex(21000),
+        gasPrice: gasPrice,
+        nonce: web3.utils.toHex(nonce)
       };
-    });
 
-    return batchTransactionResults;
-  } catch (error) {
-    console.error('Error sending batch transactions:', error);
-    throw error;
+      batchTransactions.push(transaction);
+      nonce++;
+    }
+
+    try {
+      const batchTransactionResults = await sendBatchTransactions(batchTransactions, privateKey);
+      transactions.push(...batchTransactionResults);
+    } catch (error) {
+      console.error('Error sending transactions:', error);
+      throw { from: account.address, message: error.message };
+    }
+
+    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
   }
+
+  return transactions;
 }
