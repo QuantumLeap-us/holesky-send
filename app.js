@@ -3,11 +3,11 @@ const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
-  const privateKeys = document.getElementById('private-key').value.split('\n')
+  const privateKeys = document.getElementById('private-key').value.split('\\n')
     .map(key => key.trim())
     .filter(key => key !== '');
 
-  const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
+  const toAddresses = sendForm.elements['to-addresses'].value.split('\\n')
     .map(address => address.trim())
     .filter(address => address !== '');
 
@@ -44,7 +44,7 @@ sendButton.addEventListener('click', async () => {
 });
 
 async function sendTransactionsBatch(privateKey, toAddresses) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://ethereum-holesky.blockpi.network/v1/rpc/ce9f71735a4b346a47f062a8b55fdb4c355a13d1'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
@@ -53,19 +53,47 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
   const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
 
   const transactions = [];
-  const batchTransactions = [];
 
-  for (const toAddress of toAddresses) {
-    const transaction = {
-      from: account.address,
-      to: toAddress,
-      value: web3.utils.toHex(web3.utils.toWei('0.5', 'ether')),
-      gas: web3.utils.toHex(21000),
-      gasPrice: gasPrice
-    };
+  const BATCH_SIZE = 10; // 每批发送 10 个交易
+  const DELAY_MS = 500; // 每批之间延迟 500 毫秒
 
-    batchTransactions.push(transaction);
+  let nonce = await web3.eth.getTransactionCount(account.address, 'pending');
+
+  for (let i = 0; i < toAddresses.length; i += BATCH_SIZE) {
+    const batchToAddresses = toAddresses.slice(i, i + BATCH_SIZE);
+    const batchTransactions = [];
+
+    for (const toAddress of batchToAddresses) {
+      const transaction = {
+        from: account.address,
+        to: toAddress,
+        value: web3.utils.toHex(web3.utils.toWei('0.5', 'ether')),
+        gas: web3.utils.toHex(21000),
+        gasPrice: gasPrice,
+        nonce: web3.utils.toHex(nonce)
+      };
+
+      batchTransactions.push(transaction);
+      nonce++;
+    }
+
+    try {
+      const batchTransactionResults = await sendBatchTransactions(batchTransactions);
+      transactions.push(...batchTransactionResults);
+    } catch (error) {
+      console.error('Error sending transactions:', error);
+      throw { from: account.address, message: error.message };
+    }
+
+    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
   }
+
+  return transactions;
+}
+
+async function sendBatchTransactions(batchTransactions) {
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://ethereum-holesky.blockpi.network/v1/rpc/ce9f71735a4b346a47f062a8b55fdb4c355a13d1'));
+  const account = web3.eth.accounts.privateKeyToAccount(privateKey);
 
   try {
     const gasEstimates = await Promise.all(batchTransactions.map(tx => web3.eth.estimateGas(tx)));
@@ -76,19 +104,19 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
     const signedTransactions = await Promise.all(batchTransactions.map(tx => account.signTransaction(tx)));
     const results = await Promise.all(signedTransactions.map(tx => web3.eth.sendSignedTransaction(tx.rawTransaction)));
 
-    results.forEach((result, index) => {
+    const batchTransactionResults = results.map((result, index) => {
       const transaction = batchTransactions[index];
-      transactions.push({
+      return {
         transactionHash: result.transactionHash,
         from: account.address,
         to: transaction.to,
         value: web3.utils.fromWei(transaction.value, 'ether')
-      });
+      };
     });
-  } catch (error) {
-    console.error('Error sending transactions:', error);
-    throw { from: account.address, message: error.message };
-  }
 
-  return transactions;
+    return batchTransactionResults;
+  } catch (error) {
+    console.error('Error sending batch transactions:', error);
+    throw error;
+  }
 }
