@@ -3,11 +3,11 @@ const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
-  const privateKeys = document.getElementById('private-key').value.split('\\n')
+  const privateKeys = document.getElementById('private-key').value.split('\n')
     .map(key => key.trim())
     .filter(key => key !== '');
 
-  const toAddresses = sendForm.elements['to-addresses'].value.split('\\n')
+  const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
     .map(address => address.trim())
     .filter(address => address !== '');
 
@@ -44,7 +44,7 @@ sendButton.addEventListener('click', async () => {
 });
 
 async function sendTransactionsBatch(privateKey, toAddresses) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('https://ethereum-holesky.blockpi.network/v1/rpc/ce9f71735a4b346a47f062a8b55fdb4c355a13d1'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
@@ -55,21 +55,16 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
   const transactions = [];
   const batchTransactions = [];
 
-  // 获取账户的当前 nonce 值
-  let nonce = await web3.eth.getTransactionCount(account.address, 'pending');
-
   for (const toAddress of toAddresses) {
     const transaction = {
       from: account.address,
       to: toAddress,
       value: web3.utils.toHex(web3.utils.toWei('0.5', 'ether')),
       gas: web3.utils.toHex(21000),
-      gasPrice: gasPrice,
-      nonce: web3.utils.toHex(nonce) // 使用当前 nonce 值
+      gasPrice: gasPrice
     };
 
     batchTransactions.push(transaction);
-    nonce++; // 增加 nonce 值,以防止后续交易也被视为替换交易
   }
 
   try {
@@ -95,7 +90,5 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
     throw { from: account.address, message: error.message };
   }
 
-  return transactions;
-}
   return transactions;
 }
