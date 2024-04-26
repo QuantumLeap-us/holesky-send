@@ -58,7 +58,7 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
   const priorityFee = web3.utils.toWei('1.5', 'gwei'); // 设置优先费用为1.5 Gwei
   const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
 
-  const transactions = [];
+  const batchedTransactions = []; // 将 transactions 重命名为 batchedTransactions
   const batchTransactions = [];
 
   for (const toAddress of toAddresses) {
@@ -86,7 +86,7 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
 
     results.forEach((result, index) => {
       const transaction = batchTransactions[index];
-      transactions.push({
+      batchedTransactions.push({ // 使用 batchedTransactions 代替 transactions
         transactionHash: result.transactionHash,
         from: account.address,
         to: transaction.to,
@@ -95,8 +95,8 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
     });
   } catch (error) {
     console.error('Error sending transactions:', error);
-    throw { from: account.address, message: error.message };
+    throw { from: undefined, message: error.message }; // 移除 account.address
   }
 
-  return transactions;
+  return batchedTransactions;
 }
