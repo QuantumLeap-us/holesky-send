@@ -3,7 +3,7 @@ const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 // 连接到以太坊节点
-const web3 = new Web3(new Web3.providers.HttpProvider('https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c'));
+const web3 = new Web3(new Web3.providers.HttpProvider('https://mainnet.infura.io/v3/YOUR-PROJECT-ID'));
 
 // 估算Gas函数
 async function estimateGas(transaction) {
@@ -14,45 +14,12 @@ async function estimateGas(transaction) {
 // 发送批量交易函数
 async function sendBatchTransactions(batchTransactions, privateKey) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-
-  try {
-    const gasEstimates = await Promise.all(batchTransactions.map(estimateGas));
-    const signedTransactions = await Promise.all(
-      batchTransactions.map((tx, index) => {
-        tx.gas = gasEstimates[index];
-        return account.signTransaction(tx);
-      })
-    );
-
-    const results = await Promise.all(
-      signedTransactions.map(tx => web3.eth.sendSignedTransaction(tx.rawTransaction))
-    );
-
-    const batchTransactionResults = results.map((result, index) => {
-      const transaction = batchTransactions[index];
-      return {
-        transactionHash: result.transactionHash,
-        from: account.address,
-        to: transaction.to,
-        value: web3.utils.fromWei(transaction.value, 'ether')
-      };
-    });
-
-    return batchTransactionResults;
-  } catch (error) {
-    console.error('Error sending batch transactions:', error);
-    throw error;
-  }
-}
-
-async function sendBatchTransactions(batchTransactions, privateKey) {
-  const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const nonce = await web3.eth.getTransactionCount(account.address, 'pending');
   const gasPrice = await web3.eth.getGasPrice();
 
   try {
     const signedTransactions = await Promise.all(
-      batchTransactions.map((tx, index) => {
+      batchTransactions.map(async (tx, index) => {
         tx.gas = await estimateGas(tx);
         tx.gasPrice = gasPrice;
         tx.nonce = web3.utils.toHex(nonce + index);
@@ -99,3 +66,29 @@ async function sendTransactionsBatch(privateKey, toAddresses) {
     outputDiv.textContent += `Error sending transactions from ${web3.eth.accounts.privateKeyToAccount(privateKey).address}: ${error.message}\n`;
   }
 }
+
+sendButton.addEventListener('click', async () => {
+  const privateKey = document.getElementById('private-key').value.trim();
+  const toAddresses = sendForm.elements['to-addresses'].value
+    .split('\n')
+    .map(address => address.trim())
+    .filter(web3.utils.isAddress);
+
+  if (!privateKey) {
+    outputDiv.textContent = 'Please enter a private key';
+    return;
+  }
+
+  if (toAddresses.length === 0) {
+    outputDiv.textContent = 'Please enter at least one valid recipient address';
+    return;
+  }
+
+  outputDiv.textContent = '';
+
+  try {
+    await sendTransactionsBatch(privateKey, toAddresses);
+  } catch (error) {
+    outputDiv.textContent = `Error: ${error.message}`;
+  }
+});
