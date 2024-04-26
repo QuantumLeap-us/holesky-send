@@ -1,16 +1,23 @@
-
 const sendForm = document.getElementById('send-form');
 const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
-  const privateKeys = sendForm.elements['private-keys'].value.split('\n')
+  const privateKeys = document.getElementById('private-key').value.split('\n')
     .map(key => key.trim())
     .filter(key => key !== '');
-  const toAddress = sendForm.elements['to-address'].value;
+
+  const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
+    .map(address => address.trim())
+    .filter(address => address !== '');
 
   if (privateKeys.length === 0) {
     outputDiv.textContent = 'Please enter at least one private key';
+    return;
+  }
+
+  if (toAddresses.length === 0) {
+    outputDiv.textContent = 'Please enter at least one recipient address';
     return;
   }
 
@@ -19,14 +26,15 @@ sendButton.addEventListener('click', async () => {
 
   for (const privateKey of privateKeys) {
     try {
-      const transaction = await sendTransaction(privateKey, toAddress);
-      numTransactions++;
-      outputDiv.innerHTML += `Transaction #${numTransactions} sent from ${transaction.from} with hash: <a href="https://holesky.etherscan.io/tx/${transaction.transactionHash}" rel="noopener">${transaction.transactionHash}</a><br>`;
-      outputDiv.innerHTML += `Sent ${transaction.value} ETH to ${transaction.to}<br><br>`;
-
+      const transactions = await sendTransactionsBatch(privateKey, toAddresses);
+      numTransactions += transactions.length;
+      transactions.forEach(({ transactionHash, from, to, value }, index) => {
+        outputDiv.innerHTML += `Transaction #${numTransactions - transactions.length + index + 1} sent from ${from} with hash: <a href="https://holesky.etherscan.io/tx/${transactionHash}" rel="noopener">${transactionHash}</a><br>`;
+        outputDiv.innerHTML += `Sent ${value} ETH to ${to}<br><br>`;
+      });
     } catch (error) {
       numErrors++;
-      outputDiv.textContent += `Error sending transaction from ${error.from} to ${error.to}: ${error.message}\n\n`;
+      outputDiv.textContent += `Error sending transactions from ${error.from}: ${error.message}\n`;
     }
   }
 
@@ -35,35 +43,52 @@ sendButton.addEventListener('click', async () => {
   }
 });
 
-
-async function sendTransaction(privateKey, toAddress) {
+async function sendTransactionsBatch(privateKey, toAddresses) {
   const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-  const fromAddress = account.address;
+  const balance = await web3.eth.getBalance(account.address);
 
-  const balance = await web3.eth.getBalance(fromAddress);
-  const value = web3.utils.toBN(balance).sub(web3.utils.toBN(web3.utils.toWei('0.00009', 'ether')));
+  const currentGasPrice = await web3.eth.getGasPrice();
+  const priorityFee = web3.utils.toWei('1.5', 'gwei');
+  const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
 
-  if (value <= 0) {
-    throw new Error(`Insufficient balance in ${fromAddress}. Skipping transaction.`);
+  const transactions = [];
+  const batchTransactions = [];
+
+  for (const toAddress of toAddresses) {
+    const transaction = {
+      from: account.address,
+      to: toAddress,
+      value: web3.utils.toHex(web3.utils.toWei('0.5', 'ether')),
+      gas: web3.utils.toHex(21000),
+      gasPrice: gasPrice
+    };
+
+    batchTransactions.push(transaction);
   }
 
-  const gasPrice = await web3.eth.getGasPrice();
-  const gasLimit = 21000;
-  const txObject = {
-    from: fromAddress,
-    to: toAddress,
-    value: value,
-    gasPrice: gasPrice,
-    gasLimit: gasLimit
-  };
+  try {
+    const gasEstimates = await Promise.all(batchTransactions.map(tx => web3.eth.estimateGas(tx)));
+    batchTransactions.forEach((tx, index) => {
+      tx.gas = gasEstimates[index];
+    });
 
-  const signed = await account.signTransaction(txObject);
-  const tx = await web3.eth.sendSignedTransaction(signed.rawTransaction);
-  return {
-    from: fromAddress,
-    to: toAddress,
-    value: web3.utils.fromWei(value),
-    transactionHash: tx.transactionHash
-  };
+    const signedTransactions = await Promise.all(batchTransactions.map(tx => account.signTransaction(tx)));
+    const results = await Promise.all(signedTransactions.map(tx => web3.eth.sendSignedTransaction(tx.rawTransaction)));
+
+    results.forEach((result, index) => {
+      const transaction = batchTransactions[index];
+      transactions.push({
+        transactionHash: result.transactionHash,
+        from: account.address,
+        to: transaction.to,
+        value: web3.utils.fromWei(transaction.value, 'ether')
+      });
+    });
+  } catch (error) {
+    console.error('Error sending transactions:', error);
+    throw { from: account.address, message: error.message };
+  }
+
+  return transactions;
 }
