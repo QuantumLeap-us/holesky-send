@@ -45,7 +45,51 @@ const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
 });
 
 async function sendTransactions(privateKey, toAddresses) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c'));
+const web3 = new Web3(new Web3.providers.HttpProvider('https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c'));
+sendButton.addEventListener('click', async () => {
+  const privateKeys = document.getElementById('private-key').value.split('\n')
+    .map(key => key.trim())
+    .filter(key => key !== '');
+
+  const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
+    .map(address => address.trim())
+    .filter(address => address !== '');
+
+  if (privateKeys.length === 0) {
+    outputDiv.textContent = 'Please enter at least one private key';
+    return;
+  }
+
+  if (toAddresses.length === 0) {
+    outputDiv.textContent = 'Please enter at least one recipient address';
+    return;
+  }
+
+  outputDiv.textContent = '';
+
+  let numTransactions = 0;
+  let numErrors = 0;
+
+  for (const privateKey of privateKeys) {
+    try {
+      const transactions = await sendTransactions(privateKey, toAddresses);
+      numTransactions += transactions.length;
+      transactions.forEach(({ transactionHash, from, to, value }, index) => {
+        outputDiv.innerHTML += `Transaction #${numTransactions - transactions.length + index + 1} sent from ${from} with hash: <a href="https://holesky.etherscan.io/tx/${transactionHash}" rel="noopener" target="_blank">${transactionHash}</a><br>`;
+        outputDiv.innerHTML += `Sent ${value} ETH to ${to}<br><br>`;
+      });
+    } catch (error) {
+      numErrors++;
+      outputDiv.textContent += `Error sending transactions from ${error.from}: ${error.message}\n`;
+    }
+  }
+
+  if (numErrors > 0) {
+    outputDiv.textContent += `Failed to send ${numErrors} transaction${numErrors === 1 ? '' : 's'}\n`;
+  }
+});
+
+async function sendTransactions(privateKey, toAddresses) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
@@ -57,7 +101,7 @@ async function sendTransactions(privateKey, toAddresses) {
 
   for (const toAddress of toAddresses) {
     try {
-      const receipt = await sendSingleTransaction(web3, account, toAddress, web3.utils.toWei('0.5', 'ether'), gasPrice, balance);
+      const receipt = await sendSingleTransaction(account, toAddress, web3.utils.toWei('0.5', 'ether'), gasPrice, balance);
       transactions.push({
         transactionHash: receipt.transactionHash,
         from: account.address,
@@ -73,7 +117,7 @@ async function sendTransactions(privateKey, toAddresses) {
   return transactions;
 }
 
-async function sendSingleTransaction(web3, account, toAddress, value, gasPrice, balance) {
+async function sendSingleTransaction(account, toAddress, value, gasPrice, balance) {
   const txObject = {
     from: account.address,
     to: toAddress,
