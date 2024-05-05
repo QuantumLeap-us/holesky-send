@@ -74,12 +74,18 @@ async function sendTransactions(privateKey, toAddresses) {
 }
 
 async function sendSingleTransaction(web3, account, toAddress, value, gasPrice, balance) {
-  const transaction = {
+  const txObject = {
     from: account.address,
     to: toAddress,
     value: web3.utils.toHex(value),
-    gas: await web3.eth.estimateGas(transaction),
     gasPrice: gasPrice
+  };
+
+  const gas = await web3.eth.estimateGas(txObject);
+
+  const transaction = {
+    ...txObject,
+    gas: gas
   };
 
   const gasLimit = web3.utils.toBN(transaction.gas);
