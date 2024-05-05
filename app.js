@@ -4,12 +4,12 @@ const outputDiv = document.getElementById('output');
 
 sendButton.addEventListener('click', async () => {
   const privateKeys = document.getElementById('private-key').value.split('\n')
-    .map(key => key.trim())
-    .filter(key => key !== '');
+    。map(key => key.trim())
+    。filter(key => key !== '');
 
   const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-    .map(address => address.trim())
-    .filter(address => address !== '');
+    。map(address => address.trim())
+    。filter(address => address !== '');
 
   if (privateKeys.length === 0) {
     outputDiv.textContent = 'Please enter at least one private key';
@@ -46,7 +46,7 @@ sendButton.addEventListener('click', async () => {
 });
 
 async function sendTransactions(privateKey, toAddresses) {
-  const web3 = new Web3(new Web3.providers.HttpProvider('https://eth-holesky.blastapi.io/a5a43e8d-7adc-4994-baab-809705e8ebd5'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://ethereum-holesky.blockpi.network/v1/rpc/ce9f71735a4b346a47f062a8b55fdb4c355a13d1'));
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
 
