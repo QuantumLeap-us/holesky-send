@@ -3,7 +3,7 @@ const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 // 创建全局 Web3 实例
-const web3 = new Web3(new Web3.providers.HttpProvider('https://holesky.infura.io/v3/ec2b75ea5bd94c8ea15f405a65fbff4c'));
+const web3 = new Web3(new Web3.providers.HttpProvider('https://ethereum-holesky-rpc.publicnode.com'));
 
 sendButton.addEventListener('click', async () => {
   const privateKeys = document.getElementById('private-key').value.split('\n')
