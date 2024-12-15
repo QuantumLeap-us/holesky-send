@@ -3,7 +3,7 @@ const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
 
 // 创建全局 Web3 实例
-const web3 = new Web3(new Web3.providers.HttpProvider('https://ethereum-holesky-rpc.publicnode.com'));
+const web3 = new Web3(new Web3.providers.HttpProvider('https://sepolia.base.org'));
 
 sendButton.addEventListener('click', async () => {
   const privateKeys = document.getElementById('private-key').value.split('\n')
